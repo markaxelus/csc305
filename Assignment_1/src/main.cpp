@@ -17,7 +17,7 @@ const std::string root_path = DATA_DIR;
 double inline det(const Vector2d &u, const Vector2d &v)
 {
     // TODO
-    return 0;
+    return u.x() * v.y() - u.y() * v.x();
 }
 
 // Return true iff [a,b] intersects [c,d]
