@@ -86,10 +86,43 @@ bool is_inside(const std::vector<Vector2d> &poly, const Vector2d &query)
 {
     // 1. Compute bounding box and set coordinate of a point outside the polygon
     // TODO
-    Vector2d outside(0, 0);
+    /* Init: x=0, y=0  
+        
+    */
+    // Vector2d outside(0, 0);
+    double minX = poly[0].x(), maxX = poly[0].x();
+    double minY = poly[0].y(), maxY = poly[0].y();
+
+    for (auto &point : poly) {
+        minX = std::min(minX, point.x());         
+        maxX = std::max(maxX, point.x());   
+        minY = std::min(minY, point.y());   
+        maxY = std::max(maxY, point.y());           
+    }
+    /* We do not want the ray to be trapped within the boundaries
+        Choose a point that is guaranteed to be outside of the polygon
+    */
+    Vector2d outside(maxX + 1.0, maxY + 1.0);
     // 2. Cast a ray from the query point to the 'outside' point, count number of intersections
-    // TODO
-    return true;
+    /* Even-Odd Rule
+        1. Odd number of crossings -> point inside of polygon
+        2. Even number of crossings -> point outside of polygon
+    */
+    int count = 0;
+    for (size_t i = 0; i < poly.size(); i++) {
+        Vector2d A = poly[i];
+        Vector2d B = poly[(i+1) % poly.size()]; // Wraps around back to 0 when it reaches the end
+        /* Checks if A/B crosses the ray query -> outside 
+            When checking orient we want 
+            orient(query, outside, A/B);
+            to check if it crosses outside which is guaranteed to NOT be in the polygon
+        */
+        if (intersect_segment(query, outside, A, B)) {
+            count++;
+        }
+    }
+
+    return (count % 2 == 1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
