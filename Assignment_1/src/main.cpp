@@ -44,7 +44,7 @@ bool on_segment(const Vector2d &p, const Vector2d &q, const Vector2d &r) {
                r is not guaranteed to be right endpoint.
     */
     return std::min(p.x(), r.x()) <= q.x() && q.x() <= std::max(p.x(), r.x()) &&
-           std::min(p.y(), r.y()) <= q.y() && q.y() <= std::max(p.y(), r.y()) 
+           std::min(p.y(), r.y()) <= q.y() && q.y() <= std::max(p.y(), r.y());
 }
 
 // Return true iff [a,b] intersects [c,d]
@@ -164,7 +164,7 @@ void save_xyz(const std::string &filename, const std::vector<Vector2d> &points)
 
     out << points.size() << "\n";
     for (auto &p : points) {
-        out << p.x() << p.y() << "0\n";
+        out << p.x() << " " << p.y() << " 0\n";
     }
 
 }
