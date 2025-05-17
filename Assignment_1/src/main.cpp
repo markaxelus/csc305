@@ -11,6 +11,10 @@
 using namespace Eigen;
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifndef DATA_DIR
+#define DATA_DIR ""
+#endif
+
 const std::string root_path = DATA_DIR;
 
 // Computes the determinant of the matrix whose columns are the vector u and v
