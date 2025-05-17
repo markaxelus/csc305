@@ -17,14 +17,67 @@ const std::string root_path = DATA_DIR;
 double inline det(const Vector2d &u, const Vector2d &v)
 {
     // TODO
+    /* det = (ux)(vy) - (uy)(vx) */
     return u.x() * v.y() - u.y() * v.x();
+}
+
+/* Compute orientation */
+inline double orient(const Vector2d &a, const Vector2d &b, const Vector2d &c) {
+    /* If:
+        1. det > 0; direction = counter-clockwise (left-side of AB)
+        2. det < 0; directon = clockwise (right-side of AB)
+        3. det = 0; direction = collinear (on the same line as AB)
+    */
+    return det(b - a, c - a);
+}
+
+/* Checks if a point q lies between p and r */
+bool on_segment(const Vector2d &p, const Vector2d &q, const Vector2d &r) {
+    /* Must check:
+        1. p.x <= q.x <= r.x
+        2. p.y <= q.y <= r.y
+        NOTE : p is not guaranteed to be left endpoint,
+               r is not guaranteed to be right endpoint.
+    */
+    return std::min(p.x(), r.x()) <= q.x() && q.x() <= std::max(p.x(), r.x()) &&
+           std::min(p.y(), r.y()) <= q.y() && q.y() <= std::max(p.y(), r.y()) 
 }
 
 // Return true iff [a,b] intersects [c,d]
 bool intersect_segment(const Vector2d &a, const Vector2d &b, const Vector2d &c, const Vector2d &d)
 {
+    /* Given segment AB, CD, they intersect iff
+        1.  CD lies on opposite sides of AB
+        2.  AB lies on opposite sides of CD
+        i.e(
+            orient(a,b,c) * orient(a,b,d) < 0 &&
+            orient(c,d,a) * orient(c,d,b) < 0
+        )
+
+        Edge Case:
+        If any orientation is 0 (collinear)
+        check if any points overlaps on the other segment which guarantees intersection
+            - C/D lies on AB
+            - A/B lies on CD
+        
+    */
     // TODO
-    return true;
+
+    double o1 = orient(a,b,c);
+    double o2 = orient(a,b,d);
+    double o3 = orient(c,d,a);
+    double o4 = orient(c,d,b);
+
+    if (o1*o2 < 0 && o3*o4 < 0) {
+        return true;
+    }
+
+    if (o1 == 0 && on_segment(a,c,b)) return true;
+    if (o2 == 0 && on_segment(a,d,b)) return true;
+    if (o3 == 0 && on_segment(c,a,d)) return true;
+    if (o4 == 0 && on_segment(c,b,d)) return true;
+    
+    return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
