@@ -132,12 +132,37 @@ std::vector<Vector2d> load_xyz(const std::string &filename)
     std::vector<Vector2d> points;
     std::ifstream in(filename);
     // TODO
+    if (!in) {
+        std::cerr << "Error opening file: " << filename << "\n";
+        return points;
+    }
+
+    int N;
+    in >> N;
+    points.reserve(N);
+    for (int i = 0 ; i < N; i++) {
+        double x,y,z;
+        in >> x >> y >> z;
+        points.emplace_back(x,y);
+    }
+
     return points;
 }
 
 void save_xyz(const std::string &filename, const std::vector<Vector2d> &points)
 {
     // TODO
+    std::ofstream out(filename);
+    if (!out) {
+        std::cerr << "Error wrting to file: " << filename << "\n";
+        return;
+    }
+
+    out << points.size() << "\n";
+    for (auto &p : points) {
+        out << p.x() << p.y() << "0\n";
+    }
+
 }
 
 std::vector<Vector2d> load_obj(const std::string &filename)
