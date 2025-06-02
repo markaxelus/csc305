@@ -87,6 +87,7 @@ std::vector<Vector2d> load_obj(const std::string &filename)
 
 int main(int argc, char *argv[])
 {
+    std::cout << "Hello World!" << std::endl;
     const std::string points_path = root_path + "/points.xyz";
     const std::string poly_path = root_path + "/polygon.obj";
 
