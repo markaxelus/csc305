@@ -241,47 +241,48 @@ double lerp(double a0, double a1, double w)
 {
     assert(w >= 0);
     assert(w <= 1);
-    // TODO implement linear and cubic interpolation
-    return ((a1 - a0) * (3.0 - w * 2.0) * w * w + a0);
+    // Smooth interpolation using cubic function
+    // Using (3.0 - w * 2.0) * w * w for smoother transitions
+    return a0 + (a1 - a0) * ((3.0 - w * 2.0) * w * w);
 }
 
 // Computes the dot product of the distance and gradient vectors.
 double dotGridGradient(int ix, int iy, double x, double y)
 {
-    // TODO: Compute the distance vector
-    double dx = x - ix;
-    double dy = y - iy;
+    // Compute the distance vector from grid point to the point
+    const double dx = x - static_cast<double>(ix);
+    const double dy = y - static_cast<double>(iy);
 
-    // TODO: Compute and return the dot-product
+    // Compute and return the dot-product with the gradient vector
     return (dx * grid[iy][ix][0] + dy * grid[iy][ix][1]);
 }
 
 // Compute Perlin noise at coordinates x, y
 double perlin(double x, double y)
 {
-    // TODO: Determine grid cell coordinates x0, y0
-    int x0 = int(x);
-    int x1 = x0 + 1;
-    int y0 = int(y);
-    int y1 = y0 + 1;
+    // Determine grid cell coordinates
+    const int x0 = static_cast<int>(std::floor(x));
+    const int x1 = x0 + 1;
+    const int y0 = static_cast<int>(std::floor(y));
+    const int y1 = y0 + 1;
 
     // Determine interpolation weights
-    double sx = x - x0;
-    double sy = y - y0;
+    // Could also use higher order polynomial/s-curve here
+    const double sx = x - static_cast<double>(x0);
+    const double sy = y - static_cast<double>(y0);
 
     // Interpolate between grid point gradients
-    double n0 = dotGridGradient(x0, y0, x, y);
-    double n1 = dotGridGradient(x1, y0, x, y);
+    const double n0 = dotGridGradient(x0, y0, x, y);
+    const double n1 = dotGridGradient(x1, y0, x, y);
 
-    double ix0 = lerp(n0, n1, sx);
+    const double ix0 = lerp(n0, n1, sx);
 
-    n0 = dotGridGradient(x0, y1, x, y);
-    n1 = dotGridGradient(x1, y1, x, y);
+    const double n2 = dotGridGradient(x0, y1, x, y);
+    const double n3 = dotGridGradient(x1, y1, x, y);
 
-    double ix1 = lerp(n0, n1, sx);
-    double value = lerp(ix0, ix1, sy);
+    const double ix1 = lerp(n2, n3, sx);
 
-    return value;
+    return lerp(ix0, ix1, sy);
 }
 
 Vector4d procedural_texture(const double tu, const double tv)
@@ -304,55 +305,101 @@ Vector4d procedural_texture(const double tu, const double tv)
 // Compute the intersection between a ray and a sphere, return -1 if no intersection
 double ray_sphere_intersection(const Vector3d &ray_origin, const Vector3d &ray_direction, int index, Vector3d &p, Vector3d &N)
 {
-    // TODO, implement the intersection between the ray and the sphere at index index.
-    // return t or -1 if no intersection
-
-    const Vector3d sphere_center = sphere_centers[index];
+    const Vector3d &sphere_center = sphere_centers[index];
     const double sphere_radius = sphere_radii[index];
 
-    double t = -1;
+    // Compute quadratic equation coefficients
+    const double A = ray_direction.dot(ray_direction);
+    const Vector3d origin_to_center = ray_origin - sphere_center;
+    const double B = 2.0 * ray_direction.dot(origin_to_center);
+    const double C = origin_to_center.dot(origin_to_center) - sphere_radius * sphere_radius;
 
-    if (raySphere(sphere_center, ray_origin, ray_direction, sphere_radius) == false)
+    // Compute discriminant
+    const double discriminant = B * B - 4.0 * A * C;
+
+    // No intersection if discriminant is negative
+    if (discriminant < 0)
     {
         return -1;
     }
-    else
-    {
-        // TODO set the correct intersection point, update p to the correct value
-        p = getSphere(sphere_center, ray_origin, ray_direction, sphere_radius, t);
-        N = ((p - sphere_center) / sphere_radius).normalized();
 
-        return t;
+    // Compute intersection distances
+    const double sqrt_discriminant = std::sqrt(discriminant);
+    const double t1 = (-B - sqrt_discriminant) / (2.0 * A);
+    const double t2 = (-B + sqrt_discriminant) / (2.0 * A);
+
+    // Get the nearest positive intersection
+    double t = -1;
+    if (t1 > 0 && t2 > 0)
+    {
+        t = std::min(t1, t2);
+    }
+    else if (t1 > 0)
+    {
+        t = t1;
+    }
+    else if (t2 > 0)
+    {
+        t = t2;
     }
 
-    return -1;
+    if (t < 0)
+    {
+        return -1;
+    }
+
+    // Compute intersection point and normal
+    p = ray_origin + t * ray_direction;
+    N = (p - sphere_center).normalized();
+
+    return t;
 }
 
 // Compute the intersection between a ray and a paralleogram, return -1 if no intersection
 double ray_parallelogram_intersection(const Vector3d &ray_origin, const Vector3d &ray_direction, int index, Vector3d &p, Vector3d &N)
 {
-    // TODO, implement the intersection between the ray and the parallelogram at index index.
-    // return t or -1 if no intersection
+    const Vector3d &pgram_origin = parallelograms[index].col(0);
+    const Vector3d &edge1 = parallelograms[index].col(1) - pgram_origin;
+    const Vector3d &edge2 = parallelograms[index].col(2) - pgram_origin;
 
-    const Vector3d pgram_origin = parallelograms[index].col(0);
-    const Vector3d A = parallelograms[index].col(1);
-    const Vector3d B = parallelograms[index].col(2);
-    const Vector3d pgram_u = A - pgram_origin;
-    const Vector3d pgram_v = B - pgram_origin;
+    // Compute the normal of the parallelogram
+    N = edge2.cross(edge1).normalized();
 
-    double t = -1;
-
-    if (!rayMatrix(pgram_u, pgram_v, ray_direction, pgram_origin, ray_origin))
+    // Check if ray is parallel to the parallelogram
+    const double denominator = ray_direction.dot(N);
+    if (std::abs(denominator) < 1e-10)
     {
         return -1;
     }
 
-    //TODO set the correct intersection point, update p and N to the correct values
+    // Compute intersection point with the plane
+    const double t = (pgram_origin - ray_origin).dot(N) / denominator;
+    if (t < 0)
+    {
+        return -1;
+    }
 
-    p = getPoint(pgram_u, pgram_v, ray_direction, pgram_origin, ray_origin, t);
-    N = pgram_v.cross(pgram_u).normalized();
+    // Compute intersection point
+    p = ray_origin + t * ray_direction;
 
-    return t;
+    // Check if point is inside parallelogram using barycentric coordinates
+    const Vector3d v = p - pgram_origin;
+    const double dot11 = edge1.dot(edge1);
+    const double dot12 = edge1.dot(edge2);
+    const double dot22 = edge2.dot(edge2);
+    const double dotv1 = v.dot(edge1);
+    const double dotv2 = v.dot(edge2);
+
+    const double denom = dot11 * dot22 - dot12 * dot12;
+    const double u = (dot22 * dotv1 - dot12 * dotv2) / denom;
+    const double v_coord = (dot11 * dotv2 - dot12 * dotv1) / denom;
+
+    if (u >= 0 && u <= 1 && v_coord >= 0 && v_coord <= 1)
+    {
+        return t;
+    }
+
+    return -1;
 }
 
 //Finds the closest intersecting object returns its index
@@ -411,27 +458,22 @@ int find_nearest_object(const Vector3d &ray_origin, const Vector3d &ray_directio
 // Checks if the light is visible
 bool is_light_visible(const Vector3d &ray_origin, const Vector3d &ray_direction, const Vector3d &light_position)
 {
-    // TODO: Determine if the light is visible here
-    // Use find_nearest_object
     Vector3d p, N;
+    const Vector3d light_dir = (light_position - ray_origin).normalized();
+    const double light_distance = (light_position - ray_origin).norm();
 
-    const int nearest_object = find_nearest_object(light_position, -ray_direction, p, N);
+    // Find any object between the point and the light
+    const int nearest_object = find_nearest_object(ray_origin, light_dir, p, N);
 
+    // No object found
     if (nearest_object < 0)
     {
         return true;
     }
 
-    if (p.isApprox(ray_origin, ep * 2))
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-
-    return true;
+    // Check if the intersection point is between the point and the light
+    const double intersection_distance = (p - ray_origin).norm();
+    return intersection_distance > light_distance - ep;
 }
 
 Vector4d shoot_ray(const Vector3d &ray_origin, const Vector3d &ray_direction, int max_bounce)
@@ -531,8 +573,8 @@ void raytrace_scene()
 {
     std::cout << "Simple ray tracer." << std::endl;
 
-    int w = 800;
-    int h = 400;
+    const int w = 800;
+    const int h = 400;
     MatrixXd R = MatrixXd::Zero(w, h);
     MatrixXd G = MatrixXd::Zero(w, h);
     MatrixXd B = MatrixXd::Zero(w, h);
@@ -541,22 +583,21 @@ void raytrace_scene()
     // The camera always points in the direction -z
     // The sensor grid is at a distance 'focal_length' from the camera center,
     // and covers an viewing angle given by 'field_of_view'.
-    double aspect_ratio = double(w) / double(h);
-    // double image_y = 1; // TODO: compute the correct pixels size
-    double image_y = tanf(field_of_view / 2) * focal_length;
-    // double image_x = 1; // TODO: compute the correct pixels size
-    double image_x = tanf(field_of_view / 2) * focal_length * aspect_ratio;
+    const double aspect_ratio = static_cast<double>(w) / static_cast<double>(h);
+    const double image_y = focal_length * std::tan(field_of_view / 2.0);
+    const double image_x = image_y * aspect_ratio;
 
     // The pixel grid through which we shoot rays is at a distance 'focal_length'
     const Vector3d image_origin(-image_x, image_y, -image_z);
-    const Vector3d x_displacement(2.0 / w * image_x, 0, 0);
-    const Vector3d y_displacement(0, -2.0 / h * image_y, 0);
+    const Vector3d x_displacement(2.0 * image_x / w, 0, 0);
+    const Vector3d y_displacement(0, -2.0 * image_y / h, 0);
 
-    for (unsigned i = 0; i < w; ++i)
+    // Compute ray directions for each pixel
+    #pragma omp parallel for collapse(2)
+    for (int i = 0; i < w; ++i)
     {
-        for (unsigned j = 0; j < h; ++j)
+        for (int j = 0; j < h; ++j)
         {
-            // TODO: Implement depth of field
             const Vector3d pixel_center = image_origin + (i + 0.5) * x_displacement + (j + 0.5) * y_displacement;
 
             // Prepare the ray
@@ -565,9 +606,8 @@ void raytrace_scene()
 
             if (is_perspective)
             {
-                // TODO: Perspective camera
                 ray_origin = camera_position;
-                ray_direction = pixel_center - camera_position;
+                ray_direction = (pixel_center - camera_position).normalized();
             }
             else
             {
