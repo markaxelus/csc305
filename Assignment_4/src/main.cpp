@@ -178,10 +178,9 @@ int AABBTree::build_recursive(const MatrixXd &V, const MatrixXi &F, const Matrix
         return -1;
     }
 
-    // TODO sort centroids along the longest dimension
+    AlignedBox3d centroid_box;
 
     //TODO Use AlignedBox3d to find the box around the current centroids
-    AlignedBox3d centroid_box;
 
     // Diagonal of the box
     Vector3d extent = centroid_box.diagonal();
@@ -189,6 +188,7 @@ int AABBTree::build_recursive(const MatrixXd &V, const MatrixXi &F, const Matrix
     //TODO find the largest dimension
     int longest_dim = 0;
 
+    // TODO sort centroids along the longest dimension
     std::sort(triangles.begin() + from, triangles.begin() + to, [&](int f1, int f2) {
         //TODO sort the **triangles** along the centroid largest dimension
         // return true if triangle f1 comes before triangle f2
